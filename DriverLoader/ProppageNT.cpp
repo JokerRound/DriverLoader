@@ -71,10 +71,10 @@ void CProppageNT::OnBnClickedBtnSearchfile()
     dlgSearchFile.GetOFN().nMaxFile = FILE_NUMBERS_MAX;
 
     // Popup the page.
-    DWORD dwRet = dlgSearchFile.DoModal();
+    INT_PTR iptrRet = dlgSearchFile.DoModal();
     csFilePath.ReleaseBuffer();
 
-    if (dwRet == IDOK)
+    if (iptrRet == IDOK)
     {
         m_editFilePath.SetWindowText(csFilePath);
 

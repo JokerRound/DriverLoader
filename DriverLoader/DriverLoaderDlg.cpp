@@ -16,6 +16,19 @@
 //              b.2. OnDestroy();
 //              b.3. StopAndDeleteService();
 //              b.4. OnBnClickedBtnUnloaddriver();
+//
+//      2019-02-18    Hoffman
+//      Info: a. Moidfy below member methods.
+//              a.1. OnBnClickedBtnLoaddriver();
+//                  a.1.1. Add other message info.
+//                  a.1.2. Call GetDriverInfo.
+//              a.2. OnBnClickedBtnUnloaddriver();
+//                  a.2.1. Add other message info.
+//                  a.2.2. Call GetDriverInfo.
+//              a.3. StopAndDeleteService();
+//                  a.3.1. Add SERIVCE_SOTPPED check.
+//            b. Add below member methods.
+//              b.1. GetDriverInfo();
 //******************************************************************************
 
 #include "stdafx.h"
@@ -79,7 +92,7 @@ BOOL CDriverLoaderDlg::OnInitDialog()
     rctFeildToShow.left += 5;
     rctFeildToShow.right -= 5;
     
-    for (size_t cntI = DTTCI_NT; cntI < TOTAL_DTTCI_NUMBER; cntI++)
+    for (int cntI = DTTCI_NT; cntI < TOTAL_DTTCI_NUMBER; cntI++)
     {
         // Insert title.
         m_tabDriverType.InsertItem(cntI, m_acsProppageTitle[cntI]);
@@ -169,10 +182,12 @@ HCURSOR CDriverLoaderDlg::OnQueryDragIcon()
 //******************************************************************************
 // Author:              Hoffman
 // Create Time:         2019-01-26
-// Last Time:           2019-01-26
+// Last Time:           2019-02-18
 // Logical Descrition:  
 //      Deal with button unload driver is clicked.
 //      Get information of service, then create it.
+//      The message info is different, it accord with the different error 
+//      occation. 
 //******************************************************************************
 void CDriverLoaderDlg::OnBnClickedBtnLoaddriver()
 {
@@ -182,6 +197,9 @@ void CDriverLoaderDlg::OnBnClickedBtnLoaddriver()
     DWORD dwLine = 0;
     BOOL bOutputErrMsg = FALSE;
 #endif // DEBUG
+
+    CString csMessageInfo = _T("");
+
     // Load NT Driver.
     if (DTTCI_NT == m_iCurrentSelectPage)
     {
@@ -204,29 +222,20 @@ void CDriverLoaderDlg::OnBnClickedBtnLoaddriver()
                 }
             }
 
-            // Get service name.
-            CString csServiceName;
-            m_pageNT.m_editServiceName.GetWindowText(csServiceName);
-
-            // Get display name.
-            CString csDisplayName;
-            m_pageNT.m_editDisplayName.GetWindowText(csDisplayName);
-
-            // Get service type.
-            int iServiceType = m_pageNT.m_cmbServiceType.GetCurSel();
-
-            // Get start type.
-            int iStartType = m_pageNT.m_cmbStartType.GetCurSel();
-
-            // Get error control.
-            int iErrorControl = m_pageNT.m_cmbErrorControl.GetCurSel();
-
-            // Get binary path.
-            CString csBinaryPath;
-            m_pageNT.m_editFilePath.GetWindowText(csBinaryPath);
+            if (!GetDriverInfo())
+            {
+#ifdef DEBUG
+                OutputDebugStringWithInfo(
+                    _T("Get driver info failed.\r\n"),
+                    __FILET__,
+                    __LINE__
+                );
+#endif // DEBUG
+                break;
+            }
 
             // Check serivce exist or not.
-            if (!StopAndDeleteService(csServiceName))
+            if (!StopAndDeleteService())
             {
 #ifdef DEBUG
                 OutputDebugStringWithInfo(
@@ -238,27 +247,29 @@ void CDriverLoaderDlg::OnBnClickedBtnLoaddriver()
                 break;
             }
 
-
             // Create Serivce.
-            hService = CreateService(m_hSCManager,
-                                     csServiceName,
-                                     csDisplayName,
-                                     SERVICE_ALL_ACCESS,
-                                     m_pageNT.m_adwServiceType[iServiceType],
-                                     m_pageNT.m_adwStartType[iStartType],
-                                     m_pageNT.m_adwErrorControl[iErrorControl],
-                                     csBinaryPath,
-                                     NULL,
-                                     NULL,
-                                     NULL,
-                                     NULL,
-                                     NULL);
+            hService = CreateService(
+                m_hSCManager,
+                m_csServiceName,
+                m_csDisplayName,
+                SERVICE_ALL_ACCESS,
+                m_pageNT.m_adwServiceType[m_iServiceType],
+                m_pageNT.m_adwStartType[m_iStartType],
+                m_pageNT.m_adwErrorControl[m_iErrorControl],
+                m_csBinaryPath,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL
+            );
             if (NULL == hService)
             {
 #ifdef DEBUG
                 dwLine = __LINE__;
                 bOutputErrMsg = TRUE;
 #endif // DEBUG 
+                csMessageInfo = _T("Create serivce for driver failed.\r\n");
                 break;
             }
 
@@ -270,6 +281,7 @@ void CDriverLoaderDlg::OnBnClickedBtnLoaddriver()
                 dwLine = __LINE__;
                 bOutputErrMsg = TRUE;
 #endif // DEBUG 
+                csMessageInfo = _T("Load successful, but start filed.\r\n");
                 break;
             }
 
@@ -295,7 +307,12 @@ void CDriverLoaderDlg::OnBnClickedBtnLoaddriver()
 
         if (!bLoadSuccessful)
         {
-            MessageBox(_T("NT Driver load failed!"), _T("ERROR"), MB_OK);
+            if (csMessageInfo.IsEmpty())
+            {
+                csMessageInfo = _T("NT driver load filed.\r\n");
+            }
+
+            MessageBox(csMessageInfo, _T("ERROR"), MB_OK);
         }
     } //! if 'Load NT Driver' END
 } //! OnBnClickedBtnLoaddriver() END 
@@ -322,10 +339,12 @@ void CDriverLoaderDlg::OnDestroy()
 //******************************************************************************
 // Author:              Hoffman
 // Create Time:         2019-01-26
-// Last Time:           2019-01-26
+// Last Time:           2019-02-18
 // Logical Descrition:  
 //      Deal with the event that unload driver button is clicked.
 //      Open service, then delete it.
+//      The message info is different, it accord with the different error 
+//      occation. 
 //******************************************************************************
 void CDriverLoaderDlg::OnBnClickedBtnUnloaddriver()
 {
@@ -335,6 +354,9 @@ void CDriverLoaderDlg::OnBnClickedBtnUnloaddriver()
     DWORD dwLine = 0;
     BOOL bOutputErrMsg = FALSE;
 #endif // DEBUG
+
+    CString csMessageInfo = _T("");
+
     // Unload NT Driver.
     if (DTTCI_NT == m_iCurrentSelectPage)
     {
@@ -361,7 +383,19 @@ void CDriverLoaderDlg::OnBnClickedBtnUnloaddriver()
                 }
             }
 
-            if (!StopAndDeleteService(csServiceName))
+            if (!GetDriverInfo())
+            {
+#ifdef DEBUG
+                OutputDebugStringWithInfo(
+                    _T("Get driver info failed.\r\n"),
+                    __FILET__,
+                    __LINE__
+                );
+#endif // DEBUG
+                break;
+            }
+
+            if (!StopAndDeleteService())
             {
 #ifdef DEBUG
                 OutputDebugStringWithInfo(
@@ -396,7 +430,12 @@ void CDriverLoaderDlg::OnBnClickedBtnUnloaddriver()
 
         if (!bUnloadSuccessful)
         {
-            MessageBox(_T("NT Driver unload failed!"), _T("ERROR"), MB_OK);
+            if (csMessageInfo.IsEmpty())
+            {
+                csMessageInfo = _T("NT driver unload failed.\r\n");
+            }
+
+            MessageBox(csMessageInfo, _T("ERROR"), MB_OK);
         }
     } //! if 'Unload NT Driver' END 
 } //! OnBnClickedBtnUnloaddriver() END
@@ -404,11 +443,11 @@ void CDriverLoaderDlg::OnBnClickedBtnUnloaddriver()
 //******************************************************************************
 // Author:              Hoffman
 // Create Time:         2019-01-26
-// Last Time:           2019-01-26
+// Last Time:           2019-02-18
 // Logical Descrition:  
 //      Stop a serivce, then delete it.
 //******************************************************************************
-BOOL CDriverLoaderDlg::StopAndDeleteService(const CString kcsServiceName)
+BOOL CDriverLoaderDlg::StopAndDeleteService()
 {
 #ifdef DEBUG
     DWORD dwError = -1;
@@ -430,7 +469,7 @@ BOOL CDriverLoaderDlg::StopAndDeleteService(const CString kcsServiceName)
 
         // Get serivce handle.
         hService = OpenService(m_hSCManager,
-                               kcsServiceName,
+                               m_csServiceName,
                                SERVICE_ALL_ACCESS);
         if (NULL == hService)
         {
@@ -449,7 +488,11 @@ BOOL CDriverLoaderDlg::StopAndDeleteService(const CString kcsServiceName)
             dwLine = __LINE__;
             bOutputErrMsg = TRUE;
 #endif // DEBUG 
-            break;
+
+            if (SERVICE_STOPPED != stServiceStatus.dwCurrentState)
+            {
+                break;
+            }
         }
 
         if (!DeleteService(hService))
@@ -481,4 +524,72 @@ BOOL CDriverLoaderDlg::StopAndDeleteService(const CString kcsServiceName)
     }
 
     return bRet;
-} //! DeleteDriverService() END
+} //! StopAndDeleteService() END
+
+//******************************************************************************
+// Author:              Hoffman
+// Create Time:         2019-02-18
+// Last Time:           2019-02-18
+// Logical Description:  
+//      Get driver info from dialog.
+//******************************************************************************
+BOOL CDriverLoaderDlg::GetDriverInfo()
+{
+    do
+    {
+        // Get service name.
+        m_pageNT.m_editServiceName.GetWindowText(m_csServiceName);
+        if (m_csServiceName.IsEmpty())
+        {
+#ifdef DEBUG
+            OutputDebugStringWithInfo(
+                _T("The service name is null.\r\n"),
+                __FILET__,
+                __LINE__
+            );
+#endif // DEBUG
+            break;
+        }
+
+        // Get display name.
+        m_pageNT.m_editDisplayName.GetWindowText(m_csDisplayName);
+        if (m_csDisplayName.IsEmpty())
+        {
+#ifdef DEBUG
+            OutputDebugStringWithInfo(
+                _T("The display name is null.\r\n"),
+                __FILET__,
+                __LINE__
+            );
+#endif // DEBUG
+            break;
+        }
+
+        // Get binary path.
+        m_pageNT.m_editFilePath.GetWindowText(m_csBinaryPath);
+        if (m_csDisplayName.IsEmpty())
+        {
+#ifdef DEBUG
+            OutputDebugStringWithInfo(
+                _T("The binary path is null.\r\n"),
+                __FILET__,
+                __LINE__
+            );
+#endif // DEBUG
+            break;
+        }
+
+        // Get service type.
+        m_iServiceType = m_pageNT.m_cmbServiceType.GetCurSel();
+
+        // Get start type.
+        m_iStartType = m_pageNT.m_cmbStartType.GetCurSel();
+
+        // Get error control.
+        m_iErrorControl = m_pageNT.m_cmbErrorControl.GetCurSel();
+
+        return TRUE;
+    } while (FALSE);
+
+    return FALSE;
+} //! GetDriverInfo();

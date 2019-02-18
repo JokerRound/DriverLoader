@@ -16,4 +16,4 @@ Release : OK
 4. "Unload" button, I think you know.
 
 ## TODO
-1. This has a bug， I will fix it.
+1. ~~The StopAndDeleteService has a check bug.~~ (Fixed)

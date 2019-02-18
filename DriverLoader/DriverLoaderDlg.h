@@ -12,7 +12,7 @@
 //              a.1.
 //
 //      2019-01-26    Hoffman
-//      Info: a. Modify below member method.
+//      Info: a. Modify below member methods.
 //              a.1. OnInitDialog();
 //                  a.1.1. Add initialize for tab control.
 //            b. Add below member methods.
@@ -20,6 +20,18 @@
 //              b.2. OnDestroy();
 //              b.3. StopAndDeleteService();
 //              b.4. OnBnClickedBtnUnloaddriver();
+//
+//      2019-02-18    Hoffman
+//      Info: a. Add below member methods.
+//              a.1. GetDriverInfo();
+//            b. Add below member variables.
+//              b.1. m_csServiceName;
+//              b.2. m_csBinaryPath; 
+//              b.3. m_csDisplayName; 
+//              b.4. m_iServiceType;
+//              b.k. m_iStartType; 
+//              b.6. m_iErrorControl; 
+//
 //******************************************************************************
 
 #pragma once
@@ -60,6 +72,14 @@ public:
     CTabCtrl m_tabDriverType;
     CProppageNT m_pageNT;
 
+
+    CString m_csServiceName = _T("");
+    CString m_csBinaryPath = _T("");
+    CString m_csDisplayName = _T("");
+    int m_iServiceType = 0;
+    int m_iStartType = 0;
+    int m_iErrorControl = 0;
+
 // 实现
 protected:
 	HICON m_hIcon;
@@ -73,5 +93,6 @@ public:
     afx_msg void OnBnClickedBtnLoaddriver();
     afx_msg void OnDestroy();
     afx_msg void OnBnClickedBtnUnloaddriver();
-    BOOL StopAndDeleteService(const CString kcsSeirvceName);
+    BOOL StopAndDeleteService();
+    BOOL GetDriverInfo();
 };
