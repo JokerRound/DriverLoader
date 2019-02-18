@@ -14,3 +14,6 @@ Release : OK
 2. You can modify the option if you want.
 3. Click "Load" button, it will popup a message box to note your operation is successful or not.
 4. "Unload" button, I think you know.
+
+## TODO
+1. This has a bug， I will fix it.
